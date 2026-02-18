@@ -1,0 +1,53 @@
+services:
+  # ====================================
+  # MongoDB Service (Production)
+  # ====================================
+  mongo:
+    image: mongo:8
+    container_name: dtechcx-mongo-prod
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: dtechcxdb
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+    volumes:
+      - mongo_data_prod:/data/db
+    networks:
+      - dtechcx-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ====================================
+  # Backend Service (Production)
+  # ====================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: dtechcx-backend-prod
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/dtechcxdb
+    ports:
+      - "3000:3000"
+    networks:
+      - dtechcx-network
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+networks:
+  dtechcx-network:
+    driver: bridge
+
+volumes:
+  mongo_data_prod:
+    driver: local
