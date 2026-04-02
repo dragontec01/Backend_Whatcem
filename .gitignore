@@ -1,5 +1,9 @@
 # Dependencies
 node_modules/
+.env
+dist/
+build/
+*.log
 .pnpm-store/
 
 # Build output
