@@ -1,40 +1,64 @@
 import { Router } from "express";
 import { check } from "express-validator";
+
 import {
   crearUsuario,
   loginUsuario,
   revalidarToken,
+  solicitarRecuperacion,
+  restablecerPassword,
 } from "../controllers/auth";
+
+import { validarCampos } from "../middlewares/validar-campos";
 import { validarJWT } from "../middlewares/validar-jwt";
+
 const router = Router();
 
-// 1. Crear nuevo usuario (POST /api/auth/new)
+// Ruta para crear un nuevo usuario
 router.post(
   "/new",
   [
-    // Middlewares de validación
     check("name", "El nombre es obligatorio").not().isEmpty(),
     check("email", "El email es obligatorio").isEmail(),
-    check("password", "El password debe de ser de 6 caracteres").isLength({
+    check("password", "El password debe ser de 6 caracteres").isLength({
       min: 6,
     }),
+    validarCampos,
   ],
   crearUsuario,
 );
 
-// 2. Login de usuario (POST /api/auth/login)
+// 2. Ruta para el Login
 router.post(
-  "/login",
+  "/",
   [
     check("email", "El email es obligatorio").isEmail(),
-    check("password", "El password debe de ser de 6 caracteres").isLength({
-      min: 6,
-    }),
+    check("password", "El password es obligatorio").isLength({ min: 6 }),
+    validarCampos,
   ],
   loginUsuario,
 );
 
-// 3. Revalidar Token (GET /api/auth/renew)
 router.get("/renew", validarJWT, revalidarToken);
 
 export default router;
+
+// Solicitar recuperación (envía token al "correo")
+router.post(
+  "/forgot-password",
+  [check("email", "El email es obligatorio").isEmail(), validarCampos],
+  solicitarRecuperacion,
+);
+
+// Restablecer con el token
+router.post(
+  "/reset-password",
+  [
+    check("token", "El token es obligatorio").not().isEmpty(),
+    check("password", "El password debe ser de 6 caracteres").isLength({
+      min: 6,
+    }),
+    validarCampos,
+  ],
+  restablecerPassword,
+);

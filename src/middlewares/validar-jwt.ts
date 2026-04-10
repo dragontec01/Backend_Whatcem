@@ -1,8 +1,8 @@
-import { Response, NextFunction } from "express";
+import { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 export const validarJWT = (req: any, res: Response, next: NextFunction) => {
-  // Leer el token del header x-token
+  // Leer el token del header 'x-token'
   const token = req.header("x-token");
 
   if (!token) {
@@ -13,12 +13,13 @@ export const validarJWT = (req: any, res: Response, next: NextFunction) => {
   }
 
   try {
-    // Validar el token usando la semilla del .env
+    // Verificar el token usando la semilla de tu .env
     const { uid, name }: any = jwt.verify(
       token,
-      process.env.SECRET_JWT_SEED || "Palabra-Secreta-De-Respaldo",
+      process.env.SECRET_JWT_SEED || "",
     );
 
+    // Inyectamos el uid y name en la petición para que el controlador los use
     req.uid = uid;
     req.name = name;
   } catch (error) {
