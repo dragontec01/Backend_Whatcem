@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import Usuario from "../models/Usuario";
+import Usuario from "../models/cxUser";
 import { generarJWT } from "../helpers/jwt";
 
-// 1. SOLICITAR RECUPERACIÓN (Genera el token temporal)
+// 1. SOLICITAR RECUPERACIÓN
 export const solicitarRecuperacion = async (req: Request, res: Response) => {
   const { email } = req.body;
 
@@ -16,11 +16,7 @@ export const solicitarRecuperacion = async (req: Request, res: Response) => {
         .json({ ok: false, msg: "No existe un usuario con ese email" });
     }
 
-    // Crear un token único y aleatorio
     const token = crypto.randomBytes(20).toString("hex");
-
-    // Guardar token y expiración (1 hora)
-    // Usamos el casting 'any' si el modelo aún no reconoce los campos nuevos
     (usuario as any).resetPasswordToken = token;
     (usuario as any).resetPasswordExpires = new Date(Date.now() + 3600000);
 
@@ -29,7 +25,7 @@ export const solicitarRecuperacion = async (req: Request, res: Response) => {
     res.json({
       ok: true,
       msg: "Token de recuperación generado",
-      token, // Este es el que usarás en Postman
+      token,
     });
   } catch (error) {
     console.log(error);
@@ -37,7 +33,7 @@ export const solicitarRecuperacion = async (req: Request, res: Response) => {
   }
 };
 
-// 2. RESTABLECER CONTRASEÑA (Usa el token para cambiar la clave)
+// 2. RESTABLECER CONTRASEÑA
 export const restablecerPassword = async (req: Request, res: Response) => {
   const { token, password } = req.body;
 
@@ -61,10 +57,7 @@ export const restablecerPassword = async (req: Request, res: Response) => {
 
     await usuario.save();
 
-    res.json({
-      ok: true,
-      msg: "Contraseña actualizada correctamente",
-    });
+    res.json({ ok: true, msg: "Contraseña actualizada correctamente" });
   } catch (error) {
     console.log(error);
     res.status(500).json({ ok: false, msg: "Hable con el administrador" });
@@ -78,26 +71,29 @@ export const crearUsuario = async (req: Request, res: Response) => {
   try {
     let usuario = await Usuario.findOne({ email });
     if (usuario) {
-      return res.status(400).json({
-        ok: false,
-        msg: "Un usuario ya existe con ese correo",
-      });
+      return res
+        .status(400)
+        .json({ ok: false, msg: "Un usuario ya existe con ese correo" });
     }
 
-    usuario = new Usuario(req.body);
+    usuario = new Usuario({
+      email,
+      password,
+      userName: name,
+      accessType: "regular",
+    });
+
     const salt = bcrypt.genSaltSync();
     usuario.password = bcrypt.hashSync(password, salt);
 
     await usuario.save();
 
-    console.log("✅ Registro exitoso en DB");
-
-    const token = await generarJWT(usuario.id, usuario.name);
+    const token = await generarJWT(usuario.id, (usuario as any).userName);
 
     res.status(201).json({
       ok: true,
       uid: usuario.id,
-      name: usuario.name,
+      name: (usuario as any).userName,
       token,
     });
   } catch (error) {
@@ -123,8 +119,13 @@ export const loginUsuario = async (req: Request, res: Response) => {
       return res.status(400).json({ ok: false, msg: "Password incorrecto" });
     }
 
-    const token = await generarJWT(usuario.id, usuario.name);
-    res.json({ ok: true, uid: usuario.id, name: usuario.name, token });
+    const token = await generarJWT(usuario.id, (usuario as any).userName);
+    res.json({
+      ok: true,
+      uid: usuario.id,
+      name: (usuario as any).userName,
+      token,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ ok: false, msg: "Hable con el administrador" });
