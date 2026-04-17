@@ -20,3 +20,4 @@ export const generarJWT = (uid: string, name: string) => {
     );
   });
 };
+// Backend listo para integración
