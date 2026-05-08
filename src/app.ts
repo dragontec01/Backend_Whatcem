@@ -5,6 +5,7 @@ import config from "./config";
 
 import testRoutes from "./routes/test.routes";
 import authRoutes from "./routes/auth.routes";
+import clientesRoutes from "./routes/clientes.routes";
 
 import { errorHandler } from "./middlewares/error.middleware";
 
@@ -33,6 +34,7 @@ app.get("/health", (_req: Request, res: Response) => {
 // API Routes
 app.use("/api/test", testRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/clientes", clientesRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
