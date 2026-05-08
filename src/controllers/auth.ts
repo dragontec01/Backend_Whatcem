@@ -13,21 +13,21 @@ export const solicitarRecuperacion = async (req: Request, res: Response) => {
 
   try {
     const usuario = await Usuario.findOne({ email });
+
+    // Respuesta genérica aunque el email no exista (seguridad)
     if (!usuario) {
-      return res
-        .status(404)
-        .json({ ok: false, msg: "No existe un usuario con ese email" });
+      return res.json({
+        ok: true,
+        msg: "Si el correo existe, recibirás un enlace de recuperación pronto",
+      });
     }
 
-    const token = crypto.randomBytes(20).toString("hex");
-
-    // Guardar token y expiración (1 hora)
-    (usuario as any).resetPasswordToken = token;
-    (usuario as any).resetPasswordExpires = new Date(Date.now() + 3600000);
+    const token = crypto.randomBytes(32).toString("hex");
+    (usuario as any).resetPasswordToken   = token;
+    (usuario as any).resetPasswordExpires = new Date(Date.now() + 3_600_000); // 1 hora
 
     await usuario.save();
 
-    // Enviar el correo electrónico
     await enviarEmailRecuperacion(
       usuario.email,
       (usuario as any).userName,
@@ -36,11 +36,11 @@ export const solicitarRecuperacion = async (req: Request, res: Response) => {
 
     res.json({
       ok: true,
-      msg: "Se ha enviado un enlace de recuperación a su correo",
+      msg: "Si el correo existe, recibirás un enlace de recuperación pronto",
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ ok: false, msg: "Hable con el administrador" });
+    console.error("solicitarRecuperacion error:", error);
+    res.status(500).json({ ok: false, msg: "Error interno. Intenta de nuevo." });
   }
 };
 
@@ -52,7 +52,7 @@ export const restablecerPassword = async (req: Request, res: Response) => {
 
   try {
     const usuario = await Usuario.findOne({
-      resetPasswordToken: token,
+      resetPasswordToken:   token,
       resetPasswordExpires: { $gt: new Date() },
     });
 
@@ -62,20 +62,18 @@ export const restablecerPassword = async (req: Request, res: Response) => {
         .json({ ok: false, msg: "El token es inválido o ha expirado" });
     }
 
-    // Encriptar la nueva contraseña
-    const salt = bcrypt.genSaltSync();
+    const salt = bcrypt.genSaltSync(10);
     usuario.password = bcrypt.hashSync(password, salt);
 
-    // Limpiar campos de recuperación
-    (usuario as any).resetPasswordToken = undefined;
-    (usuario as any).resetPasswordExpires = undefined;
+    (usuario as any).resetPasswordToken   = null;
+    (usuario as any).resetPasswordExpires = null;
 
     await usuario.save();
 
     res.json({ ok: true, msg: "Contraseña actualizada correctamente" });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ ok: false, msg: "Hable con el administrador" });
+    console.error("restablecerPassword error:", error);
+    res.status(500).json({ ok: false, msg: "Error interno. Intenta de nuevo." });
   }
 };
 
@@ -86,7 +84,6 @@ export const crearUsuario = async (req: any, res: Response) => {
   const { email, password, name, accessType = "regular" } = req.body;
 
   try {
-    // Verificar que quien hace la petición es ADMIN
     if (req.accessType !== "admin") {
       return res.status(403).json({
         ok: false,
@@ -94,38 +91,35 @@ export const crearUsuario = async (req: any, res: Response) => {
       });
     }
 
-    // Verificar si el usuario ya existe
-    let usuario = await Usuario.findOne({ email });
-    if (usuario) {
+    const existe = await Usuario.findOne({ email });
+    if (existe) {
       return res
         .status(400)
         .json({ ok: false, msg: "Ya existe un usuario con ese correo" });
     }
 
-    // Crear nuevo usuario
-    usuario = new Usuario({
+    const salt         = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+
+    const usuario = new Usuario({
       email,
-      password,
+      password: passwordHash,
       userName: name,
       accessType,
     });
 
-    // Encriptar contraseña
-    const salt = bcrypt.genSaltSync();
-    usuario.password = bcrypt.hashSync(password, salt);
-
     await usuario.save();
 
     res.status(201).json({
-      ok: true,
-      uid: usuario.id,
-      name: (usuario as any).userName,
-      email: usuario.email,
+      ok:         true,
+      uid:        usuario.id,
+      name:       (usuario as any).userName,
+      email:      usuario.email,
       accessType: (usuario as any).accessType,
-      msg: "Usuario creado exitosamente",
+      msg:        "Usuario creado exitosamente",
     });
   } catch (error) {
-    console.log(error);
+    console.error("crearUsuario error:", error);
     res.status(500).json({ ok: false, msg: "Error al crear usuario" });
   }
 };
@@ -138,21 +132,26 @@ export const loginUsuario = async (req: Request, res: Response) => {
 
   try {
     const usuario = await Usuario.findOne({ email });
+
     if (!usuario) {
       return res
         .status(400)
         .json({ ok: false, msg: "Credenciales incorrectas" });
     }
 
-    // Validar contraseña
+    // DEBUG temporal — eliminar cuando el login funcione
+    console.log("Hash en BD:", usuario.password);
+    console.log("Password recibido:", password);
+    console.log("compareSync:", bcrypt.compareSync(password, usuario.password));
+
     const validPassword = bcrypt.compareSync(password, usuario.password);
+
     if (!validPassword) {
       return res
         .status(400)
         .json({ ok: false, msg: "Credenciales incorrectas" });
     }
 
-    // Generar JWT incluyendo uid, name y accessType
     const token = await generarJWT(
       usuario.id,
       (usuario as any).userName,
@@ -160,16 +159,16 @@ export const loginUsuario = async (req: Request, res: Response) => {
     );
 
     res.json({
-      ok: true,
-      uid: usuario.id,
-      name: (usuario as any).userName,
-      email: usuario.email,
+      ok:         true,
+      uid:        usuario.id,
+      name:       (usuario as any).userName,
+      email:      usuario.email,
       accessType: (usuario as any).accessType,
       token,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ ok: false, msg: "Hable con el administrador" });
+    console.error("loginUsuario error:", error);
+    res.status(500).json({ ok: false, msg: "Error interno. Intenta de nuevo." });
   }
 };
 
@@ -180,18 +179,10 @@ export const revalidarToken = async (req: any, res: Response) => {
   const { uid, name, accessType } = req;
 
   try {
-    // Generar nuevo JWT
     const token = await generarJWT(uid, name, accessType);
-
-    res.json({
-      ok: true,
-      uid,
-      name,
-      accessType,
-      token,
-    });
+    res.json({ ok: true, uid, name, accessType, token });
   } catch (error) {
-    console.log(error);
+    console.error("revalidarToken error:", error);
     res.status(500).json({ ok: false, msg: "Error al revalidar token" });
   }
 };

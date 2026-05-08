@@ -12,9 +12,10 @@ const connectDB = async (): Promise<void> => {
       };
     }
 
-    await mongoose.connect(
-      process.env.MONGODB_URI || "mongodb://localhost:27017/dtechxdb",
-    );
+    // ── CORRECCIÓN: usar config.mongodbUri (que ya lee process.env.MONGODB_URI)
+    // El fallback anterior "dtechxdb" era incorrecto — la BD real es dtchcxdb
+    await mongoose.connect(config.mongodbUri, options);
+
     console.log(`MongoDB connected successfully`);
     console.log(`Database: ${mongoose.connection.name}`);
   } catch (error) {
@@ -23,7 +24,6 @@ const connectDB = async (): Promise<void> => {
   }
 };
 
-// Handle connection events
 mongoose.connection.on("disconnected", () => {
   console.log("⚠️  MongoDB disconnected");
 });
@@ -36,7 +36,6 @@ mongoose.connection.on("error", (err) => {
   console.error("❌ MongoDB error:", err);
 });
 
-// Graceful shutdown
 process.on("SIGINT", async () => {
   await mongoose.connection.close();
   console.log("🛑 MongoDB connection closed through app termination");

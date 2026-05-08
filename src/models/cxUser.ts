@@ -1,15 +1,20 @@
+
+
 import { model, Schema } from "mongoose";
 
 const cxUserSchema = new Schema({
   userName: {
     type: String,
     required: true,
+    trim: true,  
   },
   email: {
     type: String,
     required: true,
     unique: true,
     index: true,
+    trim: true, // ← Elimina espacios en blanco al inicio y al final
+    lowercase: true,
   },
   password: {
     type: String,
