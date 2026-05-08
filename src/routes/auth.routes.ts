@@ -12,55 +12,54 @@ import { validarJWT } from "../middlewares/validar-jwt";
 
 const router = Router();
 
-// --- RUTAS DE AUTENTICACIÓN EXISTENTES ---
+// ===========================
+// RUTAS DE AUTENTICACIÓN
+// ===========================
 
+// Login de usuario (pública)
 router.post(
-  "/",
+  "/login",
   [
     check("email", "El email es obligatorio").isEmail(),
-    check("password", "El password debe ser de 6 caracteres").isLength({
-      min: 6,
-    }),
+    check("password", "El password debe ser de 6 caracteres").isLength({ min: 6 }),
     validarCampos,
   ],
   loginUsuario,
 );
 
-// Crear usuario (Solo para Admins - el middleware validarJWT extrae el accessType)
+// Crear usuario (solo para admins autenticados)
 router.post(
   "/new",
   [
     validarJWT,
     check("name", "El nombre es obligatorio").not().isEmpty(),
     check("email", "El email es obligatorio").isEmail(),
-    check("password", "El password debe ser de 6 caracteres").isLength({
-      min: 6,
-    }),
+    check("password", "El password debe ser de 6 caracteres").isLength({ min: 6 }),
     validarCampos,
   ],
   crearUsuario,
 );
 
+// Revalidar token (renovar JWT)
 router.get("/renew", validarJWT, revalidarToken);
 
-// --- RUTAS DE RECUPERACIÓN DE CONTRASEÑA ---
+// ===========================
+// RUTAS DE RECUPERACIÓN DE CONTRASEÑA
+// ===========================
 
-// 1. Solicitar recuperación
+// Solicitar recuperación de contraseña
 router.post(
   "/forgot-password",
   [check("email", "El email es obligatorio").isEmail(), validarCampos],
   solicitarRecuperacion,
 );
 
-// 2. Restablecer contraseña
+// Restablecer contraseña con token
 router.post(
   "/reset-password",
   [
     check("token", "El token es obligatorio").not().isEmpty(),
-    check(
-      "password",
-      "La nueva contraseña debe tener al menos 6 caracteres",
-    ).isLength({ min: 6 }),
+    check("password", "La nueva contraseña debe tener al menos 6 caracteres").isLength({ min: 6 }),
     validarCampos,
   ],
   restablecerPassword,

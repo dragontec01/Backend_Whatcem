@@ -1,4 +1,5 @@
 import * as jwt from "jsonwebtoken";
+import config from "../config";
 
 export const generarJWT = (
   uid: string,
@@ -7,10 +8,11 @@ export const generarJWT = (
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const payload = { uid, name, accessType };
+    const seed = process.env.SECRET_JWT_SEED || config.jwtSecret;
 
     jwt.sign(
       payload,
-      process.env.SECRET_JWT_SEED || "default-secret-key",
+      seed,
       { expiresIn: "2h" },
       (err, token) => {
         if (err) {
