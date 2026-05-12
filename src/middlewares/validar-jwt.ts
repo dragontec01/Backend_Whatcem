@@ -1,5 +1,6 @@
 import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import config from "../config";   // ← agregar este import
 
 export const validarJWT = (req: any, res: Response, next: NextFunction) => {
   const token = req.header("x-token");
@@ -12,17 +13,14 @@ export const validarJWT = (req: any, res: Response, next: NextFunction) => {
   }
 
   try {
-    // ── CORRECCIÓN: extraer también accessType del payload ────────────────
-    // generarJWT firma { uid, name, accessType } — los tres deben extraerse
-    // para que crearUsuario pueda verificar req.accessType === "admin"
     const { uid, name, accessType }: any = jwt.verify(
       token,
-      process.env.SECRET_JWT_SEED || "Palabra-Secreta-De-Respaldo",
+      config.jwtSecret,   // ← mismo secret que usa generarJWT
     );
 
     req.uid        = uid;
     req.name       = name;
-    req.accessType = accessType; // ← antes faltaba esta línea
+    req.accessType = accessType;
 
     next();
   } catch (error) {
