@@ -4,10 +4,10 @@
 print('=== MongoDB Initialization Started ===');
 
 // Switch to the application database
-db = db.getSiblingDB('dtechcxdb');
+db = db.getSiblingDB('dtchcxdb');
 
 // Create collections with validation (optional)
 // Add your collection schemas here when needed
 
-print('Database initialized: dtechcxdb');
+print('Database initialized: dtchcxdb');
 print('=== MongoDB Initialization Completed ===');
